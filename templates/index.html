@@ -1,0 +1,69 @@
+{{ define "title" }}
+Index
+{{ end }}
+
+{{ define "body" }}
+<form action="/create" method="post">
+    <fieldset>
+        <legend>Order new namespace</legend>
+        <label for="name">Name
+            <input
+                type="text"
+                id="name"
+                name="name"
+                required
+            />
+        </label>
+    </fieldset>
+    <fieldset id="label">
+        <button
+        type="button"
+        onclick="addLabel()"
+        >Add label</button>
+        <button
+        type="button"
+        onclick="deleteLabel()"
+        >Delete label</button>
+
+    </fieldset>
+    <fieldset id="egress">
+        <button
+            type="button"
+            onclick="addEgress()"
+        >Add egress</button>
+        <button
+            type="button"
+            onclick="deleteEgress()"
+        >Delete egress</button>
+    </fieldset>
+    <input
+        type="submit"
+        value="Submit"
+    />
+</form>
+
+<script>
+
+    function addLabel() {
+        const fieldset = document.querySelector('fieldset#label');
+        const label = document.createElement('label');
+        label.innerHTML = 'Labels <input type="text" name="labels[]" placeholder="key=value" />';
+        fieldset.appendChild(label);
+    }
+    function deleteLabel() {
+        const fieldset = document.querySelector('fieldset#label');
+        fieldset.removeChild(fieldset.lastChild);
+    }
+
+    function addEgress() {
+        const fieldset = document.querySelector('fieldset#egress');
+        const label = document.createElement('label');
+        label.innerHTML = 'Egress endpoints <input type="text" name="egress[]" placeholder="IP/CIDR:Port" />';
+        fieldset.appendChild(label);
+    }
+    function deleteEgress() {
+        const fieldset = document.querySelector('fieldset#egress');
+        fieldset.removeChild(fieldset.lastChild);
+    }
+</script>
+{{ end}}

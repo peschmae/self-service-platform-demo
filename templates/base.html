@@ -1,0 +1,15 @@
+{{define "base.html"}}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>{{template "title" .}}</title>
+    <link rel="stylesheet" href="/static/css/pico.min.css" />
+    <meta name="color-scheme" content="light dark" />
+  </head>
+  <body>
+    <main class="container">
+    {{template "body" .}}
+    </main>
+  </body>
+</html>
+{{end}}
