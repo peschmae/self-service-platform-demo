@@ -1,0 +1,20 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app:  self-service
+  name:  self-service
+  namespace: self-service
+spec:
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+    nodePort: 30300
+  selector:
+    app: self-service
+  type: NodePort
+status:
+  loadBalancer: {}
+

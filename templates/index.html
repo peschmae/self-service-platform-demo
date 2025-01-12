@@ -16,17 +16,20 @@ Index
         </label>
     </fieldset>
     <fieldset id="label">
+        <legend>Add labels to namespace</legend>
         <button
-        type="button"
-        onclick="addLabel()"
+            type="button"
+            onclick="addLabel()"
         >Add label</button>
         <button
-        type="button"
-        onclick="deleteLabel()"
+            type="button"
+            onclick="deleteLabel()"
+            class="warning"
         >Delete label</button>
 
     </fieldset>
     <fieldset id="egress">
+        <legend>Configure egress endpoints</legend>
         <button
             type="button"
             onclick="addEgress()"
@@ -34,7 +37,32 @@ Index
         <button
             type="button"
             onclick="deleteEgress()"
+            class="warning"
         >Delete egress</button>
+    </fieldset>
+
+    <fieldset id="checks">
+        <legend>Network checks</legend>
+        <label for="enableChecks">
+            <input
+                type="checkbox"
+                id="enableChecks"
+                name="enableChecks"
+                value="false"
+                onclick="enableCheck()" />
+            Enable
+        </label>
+        <button
+            type="button"
+            onclick="addCheck()"
+            disabled
+        >Add check</button>
+        <button
+            type="button"
+            onclick="deleteCheck()"
+            class="warning"
+            disabled
+        >Delete check</button>
     </fieldset>
     <input
         type="submit"
@@ -63,6 +91,31 @@ Index
     }
     function deleteEgress() {
         const fieldset = document.querySelector('fieldset#egress');
+        fieldset.removeChild(fieldset.lastChild);
+    }
+
+    function enableCheck() {
+        const enableChecks = document.querySelector('input#enableChecks');
+        const addCheck = document.querySelector('button[onclick="addCheck()"]');
+        const deleteCheck = document.querySelector('button[onclick="deleteCheck()"]');
+        if (enableChecks.checked) {
+            addCheck.disabled = false;
+            deleteCheck.disabled = false;
+        } else {
+            addCheck.disabled = true;
+            deleteCheck.disabled = true;
+        }
+    }
+
+    function addCheck() {
+        const fieldset = document.querySelector('fieldset#checks');
+        const label = document.createElement('label');
+        label.innerHTML = 'Checks <input type="text" name="checks[]" placeholder="https://example.com" />';
+        fieldset.appendChild(label);
+    }
+
+    function deleteCheck() {
+        const fieldset = document.querySelector('fieldset#checks');
         fieldset.removeChild(fieldset.lastChild);
     }
 </script>

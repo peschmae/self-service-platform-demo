@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: self-service
+  name: self-service
+  namespace: self-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: self-service
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: self-service
+    spec:
+      serviceAccountName: self-service
+      containers:
+      - image: ghcr.io/peschmae/self-service-platform-demo:main
+        name: self-service-platform-demo
+        resources: {}
+        ports:
+          - containerPort: 8080
+        env:
+          - name: PORT
+            value: "8080"
+
+status: {}

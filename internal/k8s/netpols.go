@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -14,6 +15,11 @@ import (
 // 1. default-deny-all: block all ingress and egress traffic for all pods in the configured namespace
 // 2. default-allow-namespaces: allow all ingress and egress traffic to pods in the same namespace
 func CreateDefaultNetpols(namespace string) error {
+	// the protocol must be assigned by reference, and we can't get that of a const so we assign it to a variable first
+	// UDP is required for DNS to work
+	const udpConst = corev1.ProtocolUDP
+	udpVar := udpConst
+
 	// create a network policy block all ingress and egress traffic
 	// for all pods in the configured namespace
 	client, err := getKubeClient()
@@ -23,11 +29,33 @@ func CreateDefaultNetpols(namespace string) error {
 
 	denyAll := &networkingv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "default-deny-all",
+			Name: "default-deny-all-except-dns",
 		},
 		Spec: networkingv1.NetworkPolicySpec{
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
 			PodSelector: metav1.LabelSelector{},
+			Egress: []networkingv1.NetworkPolicyEgressRule{
+				{
+					To: []networkingv1.NetworkPolicyPeer{
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"kubernetes.io/metadata.name": "kube-system",
+								},
+							},
+						},
+					},
+					Ports: []networkingv1.NetworkPolicyPort{
+						{
+							Port: &intstr.IntOrString{
+								Type:   intstr.Int,
+								IntVal: 53,
+							},
+							Protocol: &udpVar,
+						},
+					},
+				},
+			},
 		},
 	}
 
@@ -92,7 +120,7 @@ func CreateEgressNetpol(namespace string, egressEndpoints []string) error {
 
 	np := &networkingv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "egress-allow",
+			Name: "allow-egress",
 		},
 		Spec: networkingv1.NetworkPolicySpec{
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},

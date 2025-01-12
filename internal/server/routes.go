@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"io"
 	"net/http"
+	"self-service-platform/internal/check"
 	"self-service-platform/internal/forms"
 	"self-service-platform/internal/k8s"
 
@@ -101,6 +102,14 @@ func (s *Server) FormHandler(c echo.Context) error {
 	if err != nil {
 		c.Logger().Error(err)
 		return c.String(http.StatusInternalServerError, "Internal Server Error")
+	}
+
+	if len(nsForm.CheckEndpoints) > 0 && nsForm.CheckEndpoints[0] != "" {
+		err = check.DeployCheckScript(nsForm.Name, nsForm.CheckEndpoints)
+		if err != nil {
+			c.Logger().Error(err)
+			return c.String(http.StatusInternalServerError, "Internal Server Error")
+		}
 	}
 
 	return c.Render(http.StatusOK, "confirmation.html", map[string]interface{}{"Namespace": nsForm.Name})
