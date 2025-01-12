@@ -39,15 +39,13 @@ func CreateNamespace(name string, labels []string) error {
 		},
 	}
 
-	if len(labels) > 0 {
-		ns.ObjectMeta.Labels = make(map[string]string)
-		for _, label := range labels {
-			l := strings.Split(label, "=")
-			if len(l) != 2 {
-				continue
-			}
-			ns.ObjectMeta.Labels[l[0]] = l[1]
+	ns.ObjectMeta.Labels = make(map[string]string)
+	for _, label := range labels {
+		l := strings.Split(label, "=")
+		if len(l) != 2 {
+			continue
 		}
+		ns.ObjectMeta.Labels[l[0]] = l[1]
 	}
 
 	_, err = client.CoreV1().Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})

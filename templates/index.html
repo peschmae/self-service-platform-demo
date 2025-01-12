@@ -15,6 +15,16 @@ Index
             />
         </label>
     </fieldset>
+    <fieldset>
+        <label for="description">Environment
+            <select id="environment" name="environment">
+                <option value="dev">Development</option>
+                <option value="test">Test</option>
+                <option value="staging">Staging</option>
+                <option value="production">Production</option>
+            </select>
+        </label>
+    </fieldset>
     <fieldset id="label">
         <legend>Add labels to namespace</legend>
         <button
@@ -49,6 +59,7 @@ Index
                 id="enableChecks"
                 name="enableChecks"
                 value="true"
+                role="switch"
                 onclick="enableCheck()" />
             Enable
         </label>

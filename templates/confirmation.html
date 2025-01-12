@@ -3,5 +3,22 @@ Namespace creation confirmed
 {{ end }}
 
 {{ define "body" }}
-Your new namespace {{ .Namespace }} is beeing created, and will be ready soon!
+<h2>Success!</h2>
+
+<p>
+    Your new namespace {{ .Namespace }} created, and ready to be used!
+</p>
+
+{{ if .Checks }}
+<p>
+    Network checks are enabled, and the script is currently running.
+
+    Check the logs for more information.
+
+<pre>
+kubectl -n {{ .Namespace }} logs -f  -l app=check-script
+</pre>
+</p>
+{{ end }}
+
 {{ end}}

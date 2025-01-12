@@ -86,6 +86,8 @@ func (s *Server) FormHandler(c echo.Context) error {
 		return err
 	}
 
+	nsForm.Labels = append(nsForm.Labels, "k8s.mpetermann.ch/environment="+nsForm.Environment)
+
 	err := k8s.CreateNamespace(nsForm.Name, nsForm.Labels)
 	if err != nil {
 		c.Logger().Error(err)
@@ -112,5 +114,5 @@ func (s *Server) FormHandler(c echo.Context) error {
 		}
 	}
 
-	return c.Render(http.StatusOK, "confirmation.html", map[string]interface{}{"Namespace": nsForm.Name})
+	return c.Render(http.StatusOK, "confirmation.html", map[string]interface{}{"Namespace": nsForm.Name, "Checks": nsForm.Checks})
 }
