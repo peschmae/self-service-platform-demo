@@ -21,6 +21,7 @@ spec:
       serviceAccountName: self-service
       containers:
       - image: ghcr.io/peschmae/self-service-platform-demo:main
+        imagePullPolicy: Always
         name: self-service-platform-demo
         resources: {}
         ports:
