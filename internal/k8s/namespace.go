@@ -53,25 +53,9 @@ func CreateNamespace(name string, labels []string) error {
 	_, err = client.CoreV1().Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})
 
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating namespace %s: %v", name, err)
 	}
 
 	return nil
 
-}
-
-func DeleteNamespace(name string) error {
-	client, err := getKubeClient()
-
-	if err != nil {
-		return err
-	}
-
-	err = client.CoreV1().Namespaces().Delete(context.TODO(), name, metav1.DeleteOptions{})
-
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

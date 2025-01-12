@@ -2,8 +2,7 @@ package k8s
 
 import (
 	"context"
-
-	"github.com/labstack/gommon/log"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,16 +28,14 @@ func getKubeClient() (*kubernetes.Clientset, error) {
 		config, err = clientcmd.BuildConfigFromFlags("", "/Users/peschmae/.kube/config")
 
 		if err != nil {
-			log.Error("Couldn't load configuration to connect to cluster!")
-			return nil, err
+			return nil, fmt.Errorf("couldn't load configuration to connect to cluster: %v", err)
 		}
 	}
 
 	// create the clientset
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Error("Couldn't create k8s client")
-		return nil, err
+		return nil, fmt.Errorf("couldn't create k8s client: %v", err)
 	}
 
 	return clientset, nil
@@ -49,8 +46,7 @@ func getNamespaces(clientset *kubernetes.Clientset) ([]corev1.Namespace, error) 
 	namespaces, err := clientset.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
 
 	if err != nil {
-		log.Error("Couldn't get namespaces")
-		return nil, err
+		return nil, fmt.Errorf("couldn't get namespaces: %v", err)
 	}
 
 	return namespaces.Items, nil
