@@ -1,0 +1,83 @@
+{{ define "title" }}
+Index
+{{ end }}
+
+{{ define "body" }}
+<h2>Order a new Namespace</h2>
+<form action="/create" method="post">
+    <fieldset>
+        <label for="name">Name
+            <input
+                type="text"
+                id="name"
+                name="name"
+                required
+            />
+        </label>
+    </fieldset>
+    <fieldset>
+        <label for="description">Environment
+            <select id="environment" name="environment">
+                <option value="dev">Development</option>
+                <option value="test">Test</option>
+                <option value="staging">Staging</option>
+                <option value="production">Production</option>
+            </select>
+        </label>
+    </fieldset>
+    <fieldset id="label">
+        <legend>Add labels to namespace</legend>
+        <button
+            type="button"
+            onclick="addLabel()"
+        >Add label</button>
+        <button
+            type="button"
+            onclick="deleteLabel()"
+            class="warning"
+        >Delete label</button>
+
+    </fieldset>
+    <fieldset id="egress">
+        <legend>Configure egress endpoints</legend>
+        <button
+            type="button"
+            onclick="addEgress()"
+        >Add egress</button>
+        <button
+            type="button"
+            onclick="deleteEgress()"
+            class="warning"
+        >Delete egress</button>
+    </fieldset>
+
+    <fieldset id="checks">
+        <legend>Network checks</legend>
+        <label for="enableChecks">
+            <input
+                type="checkbox"
+                id="enableChecks"
+                name="enableChecks"
+                value="true"
+                role="switch"
+                onclick="enableCheck()" />
+            Enable
+        </label>
+        <button
+            type="button"
+            onclick="addCheck()"
+            disabled
+        >Add check</button>
+        <button
+            type="button"
+            onclick="deleteCheck()"
+            class="warning"
+            disabled
+        >Delete check</button>
+    </fieldset>
+    <input
+        type="submit"
+        value="Submit"
+    />
+</form>
+{{ end}}

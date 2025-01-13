@@ -65,13 +65,19 @@ func (s *Server) RegisterRoutes() http.Handler {
 	// Ref: https://gist.github.com/rand99/808e6e9702c00ce64803d94abff65678
 	templates := make(map[string]*template.Template)
 	templates["index.html"] = template.Must(template.ParseFiles("templates/index.html", "templates/base.html"))
+	templates["regular-namespace.html"] = template.Must(template.ParseFiles("templates/regular-namespace.html", "templates/base.html"))
+	templates["operator-namespace.html"] = template.Must(template.ParseFiles("templates/operator-namespace.html", "templates/base.html"))
 	templates["confirmation.html"] = template.Must(template.ParseFiles("templates/confirmation.html", "templates/base.html"))
 	e.Renderer = &TemplateRegistry{
 		templates: templates,
 	}
 
 	e.GET("/", s.IndexHandler)
-	e.POST("/create", s.FormHandler)
+	e.GET("/create", s.RegularForm)
+	e.POST("/create", s.RegularFormHandler)
+
+	e.GET("/create-operator", s.OperatorForm)
+	e.POST("/create-operator", s.OperatorFormHandler)
 
 	return e
 }
@@ -81,7 +87,12 @@ func (s *Server) IndexHandler(c echo.Context) error {
 	return c.Render(http.StatusOK, "index.html", map[string]interface{}{})
 }
 
-func (s *Server) FormHandler(c echo.Context) error {
+func (s *Server) RegularForm(c echo.Context) error {
+
+	return c.Render(http.StatusOK, "regular-namespace.html", map[string]interface{}{})
+}
+
+func (s *Server) RegularFormHandler(c echo.Context) error {
 	nsForm := new(forms.NamespaceForm)
 	if err := c.Bind(nsForm); err != nil {
 		return c.String(http.StatusBadRequest, "Bad Request")
@@ -145,6 +156,31 @@ func (s *Server) FormHandler(c echo.Context) error {
 			c.Logger().Error(err)
 			return c.String(http.StatusInternalServerError, "Internal Server Error")
 		}
+	}
+
+	return c.Render(http.StatusOK, "confirmation.html", map[string]interface{}{"Namespace": nsForm.Name, "Checks": nsForm.Checks})
+}
+
+func (s *Server) OperatorForm(c echo.Context) error {
+
+	return c.Render(http.StatusOK, "operator-namespace.html", map[string]interface{}{})
+}
+
+func (s *Server) OperatorFormHandler(c echo.Context) error {
+	nsForm := new(forms.NamespaceForm)
+	if err := c.Bind(nsForm); err != nil {
+		return c.String(http.StatusBadRequest, "Bad Request")
+	}
+	if err := c.Validate(nsForm); err != nil {
+		return err
+	}
+
+	nsForm.Labels = append(nsForm.Labels, "k8s.mpetermann.ch/environment="+nsForm.Environment)
+
+	err := k8s.CreateSelfServiceNamespace(*nsForm)
+	if err != nil {
+		c.Logger().Error(err)
+		return c.String(http.StatusInternalServerError, "Internal Server Error")
 	}
 
 	return c.Render(http.StatusOK, "confirmation.html", map[string]interface{}{"Namespace": nsForm.Name, "Checks": nsForm.Checks})
