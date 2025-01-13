@@ -4,10 +4,14 @@ import (
 	"errors"
 	"html/template"
 	"io"
+	"io/fs"
 	"net/http"
+	"os"
+	"path/filepath"
 	"self-service-platform/internal/check"
 	"self-service-platform/internal/forms"
 	"self-service-platform/internal/k8s"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
@@ -92,6 +96,35 @@ func (s *Server) FormHandler(c echo.Context) error {
 	if err != nil {
 		c.Logger().Error(err)
 		return c.String(http.StatusInternalServerError, "Internal Server Error")
+	}
+
+	defaultResourcePath := os.Getenv("DEFAULT_RESOURCES")
+
+	if defaultResourcePath != "" {
+		var defaultResources []string
+
+		filepath.WalkDir(defaultResourcePath, func(path string, d fs.DirEntry, err error) error {
+			if d.IsDir() {
+				c.Logger().Info("Skipping directory, nested directory not supported: ", d.Name())
+				return nil
+			}
+			if strings.HasSuffix(d.Name(), ".yaml") || strings.HasSuffix(d.Name(), ".yml") {
+				content, err := os.ReadFile(path)
+				if err != nil {
+					return err
+				}
+				defaultResources = append(defaultResources, string(content))
+			}
+			return nil
+		})
+
+		for _, res := range defaultResources {
+			err = k8s.ApplyUnstructured(nsForm.Name, res)
+			if err != nil {
+				c.Logger().Error(err)
+				return c.String(http.StatusInternalServerError, "Internal Server Error")
+			}
+		}
 	}
 
 	err = k8s.CreateDefaultNetpols(nsForm.Name)
