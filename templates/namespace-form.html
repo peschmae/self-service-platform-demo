@@ -4,7 +4,7 @@ Index
 
 {{ define "body" }}
 <h2>Order a new Namespace</h2>
-<form action="/create-operator" method="post">
+<form action="{{ .FormAction }}" method="post">
     <fieldset>
         <label for="name">Name
             <input
@@ -18,13 +18,14 @@ Index
     <fieldset>
         <label for="description">Environment
             <select id="environment" name="environment">
-                <option value="dev">Development</option>
-                <option value="test">Test</option>
-                <option value="staging">Staging</option>
-                <option value="production">Production</option>
+                {{ range $key, $value := .Environments }}
+                    <option value="{{ $key }}">{{ $value }}</option>
+                {{ end }}
             </select>
         </label>
     </fieldset>
+
+
     <fieldset id="label">
         <legend>Add labels to namespace</legend>
         <button

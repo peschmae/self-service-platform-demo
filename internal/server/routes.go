@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"errors"
 	"html/template"
 	"io"
@@ -10,10 +11,12 @@ import (
 	"path/filepath"
 	"self-service-platform/internal/check"
 	"self-service-platform/internal/forms"
+	"self-service-platform/internal/git"
 	"self-service-platform/internal/k8s"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/itchyny/json2yaml"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -65,19 +68,21 @@ func (s *Server) RegisterRoutes() http.Handler {
 	// Ref: https://gist.github.com/rand99/808e6e9702c00ce64803d94abff65678
 	templates := make(map[string]*template.Template)
 	templates["index.html"] = template.Must(template.ParseFiles("templates/index.html", "templates/base.html"))
-	templates["regular-namespace.html"] = template.Must(template.ParseFiles("templates/regular-namespace.html", "templates/base.html"))
-	templates["operator-namespace.html"] = template.Must(template.ParseFiles("templates/operator-namespace.html", "templates/base.html"))
+	templates["namespace-form.html"] = template.Must(template.ParseFiles("templates/namespace-form.html", "templates/base.html"))
 	templates["confirmation.html"] = template.Must(template.ParseFiles("templates/confirmation.html", "templates/base.html"))
 	e.Renderer = &TemplateRegistry{
 		templates: templates,
 	}
 
 	e.GET("/", s.IndexHandler)
-	e.GET("/create", s.RegularForm)
+	e.GET("/create", s.NamespaceForm)
 	e.POST("/create", s.RegularFormHandler)
 
-	e.GET("/create-operator", s.OperatorForm)
+	e.GET("/create-operator", s.NamespaceForm)
 	e.POST("/create-operator", s.OperatorFormHandler)
+
+	e.GET("/create-operator-gitops", s.NamespaceForm)
+	e.POST("/create-operator-gitops", s.GitopsFormHandler)
 
 	return e
 }
@@ -87,23 +92,41 @@ func (s *Server) IndexHandler(c echo.Context) error {
 	return c.Render(http.StatusOK, "index.html", map[string]interface{}{})
 }
 
-func (s *Server) RegularForm(c echo.Context) error {
+func (s *Server) getFormContext() map[string]any {
 
-	return c.Render(http.StatusOK, "regular-namespace.html", map[string]interface{}{})
+	ctx := make(map[string]interface{})
+	ctx["Environments"] = map[string]string{"dev": "Development", "test": "Test", "staging": "Staging", "prod": "Production"}
+	ctx["RequiredLabels"] = map[string]string{"k8wms.swisscom.com/customer": "Customer/Project name", "k8wms.swisscom.com/psp": "PSP"}
+
+	return ctx
 }
 
-func (s *Server) RegularFormHandler(c echo.Context) error {
+func (s *Server) NamespaceForm(c echo.Context) error {
+
+	ctx := s.getFormContext()
+	ctx["FormAction"] = c.Path()
+
+	return c.Render(http.StatusOK, "namespace-form.html", ctx)
+}
+
+func (s *Server) mapForm(c echo.Context) (*forms.NamespaceForm, error) {
 	nsForm := new(forms.NamespaceForm)
 	if err := c.Bind(nsForm); err != nil {
-		return c.String(http.StatusBadRequest, "Bad Request")
+		return nil, err
 	}
 	if err := c.Validate(nsForm); err != nil {
-		return err
+		return nil, err
 	}
 
 	nsForm.Labels = append(nsForm.Labels, "k8s.mpetermann.ch/environment="+nsForm.Environment)
 
-	err := k8s.CreateNamespace(nsForm.Name, nsForm.Labels)
+	return nsForm, nil
+}
+
+func (s *Server) RegularFormHandler(c echo.Context) error {
+	nsForm, err := s.mapForm(c)
+
+	err = k8s.CreateNamespace(nsForm.Name, nsForm.Labels)
 	if err != nil {
 		c.Logger().Error(err)
 		return c.String(http.StatusInternalServerError, "Internal Server Error")
@@ -161,23 +184,70 @@ func (s *Server) RegularFormHandler(c echo.Context) error {
 	return c.Render(http.StatusOK, "confirmation.html", map[string]interface{}{"Namespace": nsForm.Name, "Checks": nsForm.Checks})
 }
 
-func (s *Server) OperatorForm(c echo.Context) error {
+func (s *Server) OperatorFormHandler(c echo.Context) error {
+	nsForm, err := s.mapForm(c)
 
-	return c.Render(http.StatusOK, "operator-namespace.html", map[string]interface{}{})
+	err = k8s.CreateSelfServiceNamespace(*nsForm)
+	if err != nil {
+		c.Logger().Error(err)
+		return c.String(http.StatusInternalServerError, "Internal Server Error")
+	}
+
+	return c.Render(http.StatusOK, "confirmation.html", map[string]interface{}{"Namespace": nsForm.Name, "Checks": nsForm.Checks})
 }
 
-func (s *Server) OperatorFormHandler(c echo.Context) error {
-	nsForm := new(forms.NamespaceForm)
-	if err := c.Bind(nsForm); err != nil {
-		return c.String(http.StatusBadRequest, "Bad Request")
+func (s *Server) GitopsFormHandler(c echo.Context) error {
+	nsForm, err := s.mapForm(c)
+
+	operatorNamespace, err := nsForm.MapToSelfServiceNamespace()
+	if err != nil {
+		c.Logger().Error(err)
+		return c.String(http.StatusInternalServerError, "Internal Server Error")
 	}
-	if err := c.Validate(nsForm); err != nil {
+
+	namspaceJson, err := json.Marshal(operatorNamespace)
+	if err != nil {
 		return err
 	}
 
-	nsForm.Labels = append(nsForm.Labels, "k8s.mpetermann.ch/environment="+nsForm.Environment)
+	var output strings.Builder
+	if err := json2yaml.Convert(&output, strings.NewReader(string(namspaceJson))); err != nil {
+		return err
+	}
 
-	err := k8s.CreateSelfServiceNamespace(*nsForm)
+	gitOps := git.GitOps{
+		RepoPath: os.Getenv("GITOPS_REPO"),
+		RepoURL:  os.Getenv("GITOPS_REPO_URL"),
+	}
+
+	if !filepath.IsAbs(gitOps.RepoPath) {
+		c.Logger().Error("RepoPath must be an absolute path")
+		return c.String(http.StatusInternalServerError, "Internal Server Error")
+	}
+
+	if _, err = os.Stat(gitOps.RepoPath); os.IsNotExist(err) {
+		err = gitOps.Clone()
+		if err != nil {
+			c.Logger().Error(err)
+			return err
+		}
+	} else {
+		gitOps.Pull()
+		if err != nil {
+			c.Logger().Error(err)
+			return err
+		}
+	}
+
+	os.WriteFile(filepath.Join(gitOps.RepoPath, nsForm.Name+".yaml"), []byte(output.String()), 0644)
+
+	gitOps.Commit("Add " + nsForm.Name + " selfServiceNamespace")
+	if err != nil {
+		c.Logger().Error(err)
+		return c.String(http.StatusInternalServerError, "Internal Server Error")
+	}
+
+	err = gitOps.Push()
 	if err != nil {
 		c.Logger().Error(err)
 		return c.String(http.StatusInternalServerError, "Internal Server Error")
