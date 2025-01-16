@@ -129,7 +129,7 @@ func (s *Server) RegularFormHandler(c echo.Context) error {
 	err = k8s.CreateNamespace(nsForm.Name, nsForm.Labels)
 	if err != nil {
 		c.Logger().Error(err)
-		return c.String(http.StatusInternalServerError, "Internal Server Error")
+		return c.JSON(http.StatusInternalServerError, map[string]any{"error": err.Error()})
 	}
 
 	defaultResourcePath := os.Getenv("DEFAULT_RESOURCES")
@@ -156,7 +156,7 @@ func (s *Server) RegularFormHandler(c echo.Context) error {
 			err = k8s.ApplyUnstructured(nsForm.Name, res)
 			if err != nil {
 				c.Logger().Error(err)
-				return c.String(http.StatusInternalServerError, "Internal Server Error")
+				return c.JSON(http.StatusInternalServerError, map[string]any{"error": err.Error()})
 			}
 		}
 	}
@@ -164,24 +164,24 @@ func (s *Server) RegularFormHandler(c echo.Context) error {
 	err = k8s.CreateDefaultNetpols(nsForm.Name)
 	if err != nil {
 		c.Logger().Error(err)
-		return c.String(http.StatusInternalServerError, "Internal Server Error")
+		return c.JSON(http.StatusInternalServerError, map[string]any{"error": err.Error()})
 	}
 
 	err = k8s.CreateEgressNetpol(nsForm.Name, nsForm.Egress)
 	if err != nil {
 		c.Logger().Error(err)
-		return c.String(http.StatusInternalServerError, "Internal Server Error")
+		return c.JSON(http.StatusInternalServerError, map[string]any{"error": err.Error()})
 	}
 
 	if nsForm.Checks {
 		err = check.DeployCheckScript(nsForm.Name, nsForm.CheckEndpoints)
 		if err != nil {
 			c.Logger().Error(err)
-			return c.String(http.StatusInternalServerError, "Internal Server Error")
+			return c.JSON(http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		}
 	}
 
-	return c.Render(http.StatusOK, "confirmation.html", map[string]interface{}{"Namespace": nsForm.Name, "Checks": nsForm.Checks})
+	return c.JSON(http.StatusOK, map[string]any{"namespace": nsForm.Name, "checks": nsForm.Checks})
 }
 
 func (s *Server) OperatorFormHandler(c echo.Context) error {
@@ -190,10 +190,10 @@ func (s *Server) OperatorFormHandler(c echo.Context) error {
 	err = k8s.CreateSelfServiceNamespace(*nsForm)
 	if err != nil {
 		c.Logger().Error(err)
-		return c.String(http.StatusInternalServerError, "Internal Server Error")
+		return c.JSON(http.StatusInternalServerError, map[string]any{"error": err.Error()})
 	}
 
-	return c.Render(http.StatusOK, "confirmation.html", map[string]interface{}{"Namespace": nsForm.Name, "Checks": nsForm.Checks})
+	return c.JSON(http.StatusOK, map[string]any{"namespace": nsForm.Name, "checks": nsForm.Checks})
 }
 
 func (s *Server) GitopsFormHandler(c echo.Context) error {
@@ -202,17 +202,19 @@ func (s *Server) GitopsFormHandler(c echo.Context) error {
 	operatorNamespace, err := nsForm.MapToSelfServiceNamespace()
 	if err != nil {
 		c.Logger().Error(err)
-		return c.String(http.StatusInternalServerError, "Internal Server Error")
+		return c.JSON(http.StatusInternalServerError, map[string]any{"error": err.Error()})
 	}
 
 	namspaceJson, err := json.Marshal(operatorNamespace)
 	if err != nil {
-		return err
+		c.Logger().Error(err)
+		return c.JSON(http.StatusInternalServerError, map[string]any{"error": err.Error()})
 	}
 
 	var output strings.Builder
 	if err := json2yaml.Convert(&output, strings.NewReader(string(namspaceJson))); err != nil {
-		return err
+		c.Logger().Error(err)
+		return c.JSON(http.StatusInternalServerError, map[string]any{"error": err.Error()})
 	}
 
 	gitOps := git.GitOps{
@@ -222,7 +224,7 @@ func (s *Server) GitopsFormHandler(c echo.Context) error {
 
 	if !filepath.IsAbs(gitOps.RepoPath) {
 		c.Logger().Error("RepoPath must be an absolute path")
-		return c.String(http.StatusInternalServerError, "Internal Server Error")
+		return c.JSON(http.StatusInternalServerError, map[string]any{"error": err.Error()})
 	}
 
 	if _, err = os.Stat(gitOps.RepoPath); os.IsNotExist(err) {
@@ -235,7 +237,7 @@ func (s *Server) GitopsFormHandler(c echo.Context) error {
 		gitOps.Pull()
 		if err != nil {
 			c.Logger().Error(err)
-			return err
+			return c.JSON(http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		}
 	}
 
@@ -244,14 +246,14 @@ func (s *Server) GitopsFormHandler(c echo.Context) error {
 	gitOps.Commit("Add " + nsForm.Name + " selfServiceNamespace")
 	if err != nil {
 		c.Logger().Error(err)
-		return c.String(http.StatusInternalServerError, "Internal Server Error")
+		return c.JSON(http.StatusInternalServerError, map[string]any{"error": err.Error()})
 	}
 
 	err = gitOps.Push()
 	if err != nil {
 		c.Logger().Error(err)
-		return c.String(http.StatusInternalServerError, "Internal Server Error")
+		return c.JSON(http.StatusInternalServerError, map[string]any{"error": err.Error()})
 	}
 
-	return c.Render(http.StatusOK, "confirmation.html", map[string]interface{}{"Namespace": nsForm.Name, "Checks": nsForm.Checks})
+	return c.JSON(http.StatusOK, map[string]any{"namespace": nsForm.Name, "checks": nsForm.Checks})
 }

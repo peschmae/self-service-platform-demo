@@ -2,8 +2,7 @@ package k8s
 
 import (
 	"context"
-	"strconv"
-	"strings"
+	"self-service-platform/internal/forms"
 
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,8 +65,8 @@ func CreateDefaultNetpols(namespace string) error {
 
 }
 
-func CreateEgressNetpol(namespace string, egressEndpoints []string) error {
-	if len(egressEndpoints) == 0 || egressEndpoints[0] == "" {
+func CreateEgressNetpol(namespace string, egressEndpoints []forms.Egress) error {
+	if len(egressEndpoints) == 0 {
 		return nil
 	}
 
@@ -91,26 +90,19 @@ func CreateEgressNetpol(namespace string, egressEndpoints []string) error {
 
 	for _, egress := range egressEndpoints {
 
-		e := strings.Split(egress, ":")
-
-		port, err := strconv.Atoi(e[1])
-		if err != nil {
-			return err
-		}
-
 		np.Spec.Egress = append(np.Spec.Egress, networkingv1.NetworkPolicyEgressRule{
 			Ports: []networkingv1.NetworkPolicyPort{
 				{
 					Port: &intstr.IntOrString{
 						Type:   intstr.Int,
-						IntVal: int32(port),
+						IntVal: egress.Port,
 					},
 				},
 			},
 			To: []networkingv1.NetworkPolicyPeer{
 				{
 					IPBlock: &networkingv1.IPBlock{
-						CIDR: e[0],
+						CIDR: egress.Cidr,
 					},
 				},
 			},

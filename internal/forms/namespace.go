@@ -1,31 +1,27 @@
 package forms
 
 import (
-	"fmt"
-	"strconv"
-	"strings"
-
 	k8smpetermannchv1beta1 "github.com/peschmae/self-service-operator-demo/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type NamespaceForm struct {
-	Name           string   `form:"name" validate:"required"`
-	Environment    string   `form:"environment" validate:"required"`
-	Labels         []Label  `form:"labels[]"`
-	Egress         []string `form:"egress[]"`
-	Checks         bool     `form:"enableChecks"`
-	CheckEndpoints []string `form:"checks[]"`
+	Name           string   `form:"name" json:"name" validate:"required"`
+	Environment    string   `form:"environment" json:"environment" validate:"required"`
+	Labels         []Label  `form:"labels[]" json:"labels[]"`
+	Egress         []Egress `form:"egress[]" json:"egress[]"`
+	Checks         bool     `form:"enableChecks" json:"enableChecks"`
+	CheckEndpoints []string `form:"checks[]" json:"checks[]"`
 }
 
 type Label struct {
-	Key   string `form:"key" validate:"required"`
-	Value string `form:"value" validate:"required"`
+	Key   string `form:"key" json:"key" validate:"required"`
+	Value string `form:"value" json:"value" validate:"required"`
 }
 
-func (nsForm *NamespaceForm) UnmarshalParam(param string) error {
-	fmt.Println(param)
-	return nil
+type Egress struct {
+	Cidr string `form:"cidr" json:"cidr" validate:"required"`
+	Port int32  `form:"port" json:"port" validate:"required"`
 }
 
 func (nsForm *NamespaceForm) MapToSelfServiceNamespace() (*k8smpetermannchv1beta1.SelfServiceNamespace, error) {
@@ -51,17 +47,9 @@ func (nsForm *NamespaceForm) MapToSelfServiceNamespace() (*k8smpetermannchv1beta
 
 	for _, egress := range nsForm.Egress {
 
-		e := strings.Split(egress, ":")
-
-		cidr := e[0]
-		port, err := strconv.Atoi(e[1])
-		if err != nil {
-			return nil, err
-		}
-
 		operatorNamespace.Spec.EgressConfigurations = append(operatorNamespace.Spec.EgressConfigurations, k8smpetermannchv1beta1.EgressConfigurationSpec{
-			Cidr:     cidr,
-			Port:     int32(port),
+			Cidr:     egress.Cidr,
+			Port:     egress.Port,
 			Protocol: "TCP",
 		})
 	}

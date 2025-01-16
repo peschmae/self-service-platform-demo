@@ -82,12 +82,18 @@ Index
     />
 </form>
 
+<div id="response" style="display: none;">
+    <span aria-busy="true">Waiting for response...</span>
+</div>
+
 <script>
-    function addLabel() {
-        const fieldset = document.querySelector('fieldset#label');
-        const label = document.createElement('label');
-        label.innerHTML = 'Labels <input type="text" name="labels[][key]" placeholder="k8s.mpetermann.ch/placeholder" /> <input type="text" name="labels[][value]" placeholder="value" />';
-        fieldset.appendChild(label);
-    }
+    // document loaded
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.querySelector('form');
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            submitJson();
+        });
+    });
 </script>
 {{ end}}
