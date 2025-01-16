@@ -3,13 +3,13 @@ package k8s
 import (
 	"context"
 	"fmt"
-	"strings"
+	"self-service-platform/internal/forms"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateNamespace(name string, labels []string) error {
+func CreateNamespace(name string, labels []forms.Label) error {
 	// create a namespace
 	client, err := getKubeClient()
 
@@ -41,11 +41,7 @@ func CreateNamespace(name string, labels []string) error {
 
 	ns.ObjectMeta.Labels = make(map[string]string)
 	for _, label := range labels {
-		l := strings.Split(label, "=")
-		if len(l) != 2 {
-			continue
-		}
-		ns.ObjectMeta.Labels[l[0]] = l[1]
+		ns.ObjectMeta.Labels[label.Key] = label.Value
 	}
 
 	_, err = client.CoreV1().Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})

@@ -118,7 +118,7 @@ func (s *Server) mapForm(c echo.Context) (*forms.NamespaceForm, error) {
 		return nil, err
 	}
 
-	nsForm.Labels = append(nsForm.Labels, "k8s.mpetermann.ch/environment="+nsForm.Environment)
+	nsForm.Labels = append(nsForm.Labels, forms.Label{Key: "k8s.mpetermann.ch/namespace", Value: nsForm.Environment})
 
 	return nsForm, nil
 }

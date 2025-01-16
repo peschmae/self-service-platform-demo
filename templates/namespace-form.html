@@ -81,4 +81,13 @@ Index
         value="Submit"
     />
 </form>
+
+<script>
+    function addLabel() {
+        const fieldset = document.querySelector('fieldset#label');
+        const label = document.createElement('label');
+        label.innerHTML = 'Labels <input type="text" name="labels[][key]" placeholder="k8s.mpetermann.ch/placeholder" /> <input type="text" name="labels[][value]" placeholder="value" />';
+        fieldset.appendChild(label);
+    }
+</script>
 {{ end}}

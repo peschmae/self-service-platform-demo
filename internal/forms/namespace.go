@@ -1,6 +1,7 @@
 package forms
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -11,10 +12,20 @@ import (
 type NamespaceForm struct {
 	Name           string   `form:"name" validate:"required"`
 	Environment    string   `form:"environment" validate:"required"`
-	Labels         []string `form:"labels[]"`
+	Labels         []Label  `form:"labels[]"`
 	Egress         []string `form:"egress[]"`
 	Checks         bool     `form:"enableChecks"`
 	CheckEndpoints []string `form:"checks[]"`
+}
+
+type Label struct {
+	Key   string `form:"key" validate:"required"`
+	Value string `form:"value" validate:"required"`
+}
+
+func (nsForm *NamespaceForm) UnmarshalParam(param string) error {
+	fmt.Println(param)
+	return nil
 }
 
 func (nsForm *NamespaceForm) MapToSelfServiceNamespace() (*k8smpetermannchv1beta1.SelfServiceNamespace, error) {
@@ -35,11 +46,7 @@ func (nsForm *NamespaceForm) MapToSelfServiceNamespace() (*k8smpetermannchv1beta
 	}
 
 	for _, label := range nsForm.Labels {
-		l := strings.Split(label, "=")
-		if len(l) != 2 {
-			continue
-		}
-		operatorNamespace.Spec.AdditionalLabels[l[0]] = l[1]
+		operatorNamespace.Spec.AdditionalLabels[label.Key] = label.Value
 	}
 
 	for _, egress := range nsForm.Egress {
